@@ -1,0 +1,261 @@
+import '../models/spence_question.dart';
+
+// Las 4 opciones de respuesta (siempre las mismas)
+final List<AnswerOption> answerOptions = [
+  AnswerOption(
+    label: 'Nunca',
+    value: 0,
+    emoji: '😊',
+    description: 'Casi nunca me pasa',
+  ),
+  AnswerOption(
+    label: 'A veces',
+    value: 1,
+    emoji: '😐',
+    description: 'Ocurre de vez en cuando',
+  ),
+  AnswerOption(
+    label: 'Muchas veces',
+    value: 2,
+    emoji: '😟',
+    description: 'Me ocurre con frecuencia',
+  ),
+  AnswerOption(
+    label: 'Siempre',
+    value: 3,
+    emoji: '😰',
+    description: 'Es totalmente válido sentirlo así',
+  ),
+];
+
+// Las 38 preguntas del Test de Spence (SCAS)
+final List<SpenceQuestion> spenceQuestions = [
+  SpenceQuestion(
+    number: 1,
+    text: 'Me preocupo por las cosas.',
+    subscale: 'OAD',
+    emoji: '🤔',
+  ),
+  SpenceQuestion(
+    number: 2,
+    text: 'Me da miedo estar solo en casa.',
+    subscale: 'SAD',
+    emoji: '🏠',
+  ),
+  SpenceQuestion(
+    number: 3,
+    text: 'Me siento mal cuando hay un examen.',
+    subscale: 'OAD',
+    emoji: '📝',
+  ),
+  SpenceQuestion(
+    number: 4,
+    text: 'Me da miedo los perros.',
+    subscale: 'Phobia',
+    emoji: '🐶',
+  ),
+  SpenceQuestion(
+    number: 5,
+    text: 'Me da miedo la oscuridad.',
+    subscale: 'Phobia',
+    emoji: '🌙',
+  ),
+  SpenceQuestion(
+    number: 6,
+    text: 'Me da miedo que me mire la gente.',
+    subscale: 'SoP',
+    emoji: '👀',
+  ),
+  SpenceQuestion(
+    number: 7,
+    text: 'Me da miedo tener pensamientos malos o tontos.',
+    subscale: 'OCD',
+    emoji: '💭',
+  ),
+  SpenceQuestion(
+    number: 8,
+    text: 'Me da miedo estar lejos de mis padres.',
+    subscale: 'SAD',
+    emoji: '👨‍👩‍👧',
+  ),
+  SpenceQuestion(
+    number: 9,
+    text: 'Me da miedo que algo malo me pase a mí o a mi familia.',
+    subscale: 'OAD',
+    emoji: '😨',
+  ),
+  SpenceQuestion(
+    number: 10,
+    text: 'Me da miedo hacer el ridículo delante de la gente.',
+    subscale: 'SoP',
+    emoji: '😳',
+  ),
+  SpenceQuestion(
+    number: 11,
+    text: 'Me da miedo ir al médico o al dentista.',
+    subscale: 'Phobia',
+    emoji: '🏥',
+  ),
+  SpenceQuestion(
+    number: 12,
+    text: 'Me da miedo que me pase algo malo.',
+    subscale: 'OAD',
+    emoji: '😰',
+  ),
+  SpenceQuestion(
+    number: 13,
+    text: 'Tengo que comprobar las cosas varias veces.',
+    subscale: 'OCD',
+    emoji: '🔍',
+  ),
+  SpenceQuestion(
+    number: 14,
+    text: 'Me da miedo los espacios cerrados o pequeños.',
+    subscale: 'PD_AG',
+    emoji: '🚪',
+  ),
+  SpenceQuestion(
+    number: 15,
+    text: 'Me preocupa lo que la gente piense de mí.',
+    subscale: 'SoP',
+    emoji: '🧠',
+  ),
+  SpenceQuestion(
+    number: 16,
+    text: 'Me da miedo los insectos o arañas.',
+    subscale: 'Phobia',
+    emoji: '🕷️',
+  ),
+  SpenceQuestion(
+    number: 17,
+    text: 'De repente siento que no puedo respirar.',
+    subscale: 'PD_AG',
+    emoji: '😮‍💨',
+  ),
+  SpenceQuestion(
+    number: 18,
+    text: 'Me da miedo los lugares con mucha gente.',
+    subscale: 'PD_AG',
+    emoji: '👥',
+  ),
+  SpenceQuestion(
+    number: 19,
+    text: 'Me preocupa hacer las cosas mal.',
+    subscale: 'OAD',
+    emoji: '😥',
+  ),
+  SpenceQuestion(
+    number: 20,
+    text: 'Me da miedo estar en lugares altos.',
+    subscale: 'Phobia',
+    emoji: '🏔️',
+  ),
+  SpenceQuestion(
+    number: 21,
+    text: 'Me da miedo hablar delante de la clase.',
+    subscale: 'SoP',
+    emoji: '🗣️',
+  ),
+  SpenceQuestion(
+    number: 22,
+    text: 'Me da miedo separarme de mis padres.',
+    subscale: 'SAD',
+    emoji: '💔',
+  ),
+  SpenceQuestion(
+    number: 23,
+    text: 'Me da miedo tener pensamientos que no puedo controlar.',
+    subscale: 'OCD',
+    emoji: '🌀',
+  ),
+  SpenceQuestion(
+    number: 24,
+    text: 'Me da miedo estar solo en casa sin mis padres.',
+    subscale: 'SAD',
+    emoji: '🏚️',
+  ),
+  SpenceQuestion(
+    number: 25,
+    text: 'Me siento nervioso cuando tengo que hablar con alguien.',
+    subscale: 'SoP',
+    emoji: '💬',
+  ),
+  SpenceQuestion(
+    number: 26,
+    text: 'Me da miedo que me secuestren o me hagan daño.',
+    subscale: 'SAD',
+    emoji: '😱',
+  ),
+  SpenceQuestion(
+    number: 27,
+    text: 'Me da miedo los truenos y los rayos.',
+    subscale: 'Phobia',
+    emoji: '⛈️',
+  ),
+  SpenceQuestion(
+    number: 28,
+    text: 'Me da miedo que mi corazón lata muy rápido.',
+    subscale: 'PD_AG',
+    emoji: '❤️',
+  ),
+  SpenceQuestion(
+    number: 29,
+    text: 'Me preocupa que algo malo le pase a mi familia.',
+    subscale: 'OAD',
+    emoji: '👪',
+  ),
+  SpenceQuestion(
+    number: 30,
+    text: 'Me da miedo los exámenes.',
+    subscale: 'OAD',
+    emoji: '📚',
+  ),
+  SpenceQuestion(
+    number: 31,
+    text: 'Me da miedo estar en lugares donde no puedo escapar.',
+    subscale: 'PD_AG',
+    emoji: '🚷',
+  ),
+  SpenceQuestion(
+    number: 32,
+    text: 'Me da miedo que la gente me critique.',
+    subscale: 'SoP',
+    emoji: '😔',
+  ),
+  SpenceQuestion(
+    number: 33,
+    text: 'Me da miedo que me pase algo malo a mí solo.',
+    subscale: 'SAD',
+    emoji: '🚶',
+  ),
+  SpenceQuestion(
+    number: 34,
+    text: 'Me da miedo los animales.',
+    subscale: 'Phobia',
+    emoji: '🐍',
+  ),
+  SpenceQuestion(
+    number: 35,
+    text: 'De repente me siento muy asustado sin razón.',
+    subscale: 'PD_AG',
+    emoji: '😧',
+  ),
+  SpenceQuestion(
+    number: 36,
+    text: 'Me da miedo tener pensamientos repetitivos.',
+    subscale: 'OCD',
+    emoji: '🔁',
+  ),
+  SpenceQuestion(
+    number: 37,
+    text: 'Me da miedo estar en multitudes.',
+    subscale: 'PD_AG',
+    emoji: '🎪',
+  ),
+  SpenceQuestion(
+    number: 38,
+    text: 'Me da miedo quedarme solo.',
+    subscale: 'SAD',
+    emoji: '😢',
+  ),
+];
