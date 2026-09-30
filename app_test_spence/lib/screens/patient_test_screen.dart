@@ -1,3 +1,5 @@
+import '../services/spence_scoring.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +8,13 @@ import '../data/spence_questions.dart';
 import '../models/spence_question.dart';
 
 class PatientTestScreen extends StatefulWidget {
-  const PatientTestScreen({super.key});
+  final String patientName;
+  final int patientAge;
+  const PatientTestScreen({
+    super.key,
+    required this.patientName,
+    required this.patientAge,
+  });
 
   @override
   State<PatientTestScreen> createState() => _PatientTestScreenState();
@@ -54,23 +62,30 @@ class _PatientTestScreenState extends State<PatientTestScreen> {
       final supabase = Supabase.instance.client;
       final userId = supabase.auth.currentUser?.id;
 
-      // Si no hay usuario logueado, usamos un ID temporal para pruebas
-      final patientId = userId ?? '00000000-0000-0000-0000-000000000000';
+      // Calcular resultados
+      final total = SpenceScoring.calculateTotal(_answers);
+      final subscaleResults = SpenceScoring.calculate(_answers);
 
-      // 1. Crear el test en la tabla spence_tests
+      // Crear el test con el nombre y edad del paciente
       final testResponse = await supabase
           .from('spence_tests')
           .insert({
-            'patient_id': patientId,
+            'patient_id': userId, // Puede ser null si no hay login
+            'patient_name': widget.patientName,
+            'patient_age': widget.patientAge,
             'status': 'completed',
             'completed_at': DateTime.now().toUtc().toIso8601String(),
+            'total_score': total['total'],
+            'total_t_score': null,
+            'total_percentile': total['percentage'],
+            'risk_level': total['riskLevel'],
           })
           .select()
           .single();
 
       final testId = testResponse['id'];
 
-      // 2. Guardar las respuestas individuales
+      // Guardar las respuestas
       final answerRecords = _answers.entries.map((entry) {
         return {
           'test_id': testId,
@@ -78,30 +93,22 @@ class _PatientTestScreenState extends State<PatientTestScreen> {
           'score': entry.value,
         };
       }).toList();
-
       await supabase.from('spence_answers').insert(answerRecords);
 
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('¡Genial! 🎉'),
-            content: const Text(
-              'Has terminado el cuestionario. Tu médico podrá revisar tus respuestas y ayudarte mejor.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.go('/');
-                },
-                child: const Text('Volver al inicio'),
-              ),
-            ],
-          ),
-        );
-      }
+      // Guardar subescalas
+      final subscaleRecords = subscaleResults.map((r) {
+        return {
+          'test_id': testId,
+          'subscale_code': r.code,
+          'score': r.score,
+          't_score': null,
+          'percentile': r.percentage,
+          'risk_level': r.riskLevel,
+        };
+      }).toList();
+      await supabase.from('spence_subscales').insert(subscaleRecords);
+
+      if (mounted) _showCompletionDialog(total['riskLevel'] as String);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -110,6 +117,44 @@ class _PatientTestScreenState extends State<PatientTestScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showCompletionDialog(String riskLevel) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¡Genial! 🎉', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('😊', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            const Text(
+              'Has terminado el cuestionario. Tu médico podrá revisar tus respuestas y ayudarte mejor.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Volver al inicio'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

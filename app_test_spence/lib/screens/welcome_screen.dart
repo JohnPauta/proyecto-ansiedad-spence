@@ -47,8 +47,7 @@ class WelcomeScreen extends StatelessWidget {
                 subtitle: 'Realiza tu evaluación de forma tranquila',
                 color: Colors.teal.shade50,
                 onTap: () {
-                  // TODO: Navegar a la pantalla del test
-                  context.go('/test');
+                  context.go('/patient-info');
                   print('Navegando a test de paciente...');
                 },
               ),

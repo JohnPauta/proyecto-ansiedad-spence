@@ -2,30 +2,71 @@ import 'package:go_router/go_router.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/doctor_dashboard_screen.dart';
+import 'screens/patient_info_screen.dart';
 import 'screens/patient_test_screen.dart';
+import 'screens/test_detail_screen.dart';
+import 'screens/patient_history_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
+    // --- Pantalla de bienvenida ---
     GoRoute(
       path: '/',
       name: 'welcome',
       builder: (context, state) => const WelcomeScreen(),
     ),
+
+    // --- Login del médico ---
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
     ),
+
+    // --- Dashboard del médico ---
     GoRoute(
       path: '/dashboard',
       name: 'dashboard',
       builder: (context, state) => const DoctorDashboardScreen(),
     ),
+
+    // --- Datos previos al test (Lunny pide nombre y edad) ---
+    GoRoute(
+      path: '/patient-info',
+      name: 'patient-info',
+      builder: (context, state) => const PatientInfoScreen(),
+    ),
+
+    // --- Test de Spence (recibe nombre y edad por query params) ---
     GoRoute(
       path: '/test',
       name: 'test',
-      builder: (context, state) => const PatientTestScreen(),
+      builder: (context, state) {
+        final name = state.uri.queryParameters['name'] ?? 'Paciente';
+        final age = int.tryParse(state.uri.queryParameters['age'] ?? '0') ?? 0;
+        return PatientTestScreen(patientName: name, patientAge: age);
+      },
+    ),
+
+    // --- Detalle del informe de un test específico ---
+    GoRoute(
+      path: '/test-detail/:id',
+      name: 'test-detail',
+      builder: (context, state) {
+        final testId = state.pathParameters['id']!;
+        return TestDetailScreen(testId: testId);
+      },
+    ),
+
+    // --- Evolución histórica del paciente ---
+    GoRoute(
+      path: '/patient-history/:name',
+      name: 'patient-history',
+      builder: (context, state) {
+        final name = Uri.decodeComponent(state.pathParameters['name']!);
+        return PatientHistoryScreen(patientName: name);
+      },
     ),
   ],
 );
