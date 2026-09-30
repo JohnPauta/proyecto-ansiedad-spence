@@ -67,8 +67,16 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
+          // --- Botón de Mis Pacientes ---
+          IconButton(
+            icon: const Icon(Icons.people),
+            tooltip: 'Mis Pacientes',
+            onPressed: () => context.push('/patients'),
+          ),
+          // --- Botón de cerrar sesión ---
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
               if (context.mounted) context.go('/');
@@ -86,8 +94,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   // --- Tarjetas de resumen ---
                   Row(
                     children: [
-                      _buildSummaryCard('Pacientes', '$total', Icons.people,
-                          Colors.blue),
+                      _buildSummaryCard(
+                          'Pacientes', '$total', Icons.people, Colors.blue),
                       const SizedBox(width: 12),
                       _buildSummaryCard('Alertas', '$alertCount',
                           Icons.warning_amber, Colors.red),

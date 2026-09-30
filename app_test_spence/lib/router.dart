@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/doctor_dashboard_screen.dart';
@@ -6,6 +7,8 @@ import 'screens/patient_info_screen.dart';
 import 'screens/patient_test_screen.dart';
 import 'screens/test_detail_screen.dart';
 import 'screens/patient_history_screen.dart';
+import 'screens/patients_list_screen.dart';
+import 'screens/new_patient_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -67,6 +70,17 @@ final GoRouter appRouter = GoRouter(
         final name = Uri.decodeComponent(state.pathParameters['name']!);
         return PatientHistoryScreen(patientName: name);
       },
+    ),
+    // --- Lista de pacientes ---
+    GoRoute(
+      path: '/patients',
+      name: 'patients',
+      builder: (context, state) => const PatientsListScreen(),
+    ),
+    GoRoute(
+      path: '/patients/new',
+      name: 'new-patient',
+      builder: (context, state) => const NewPatientScreen(),
     ),
   ],
 );
