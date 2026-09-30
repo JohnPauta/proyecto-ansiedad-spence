@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/spence_question.dart';
+import '../data/spence_questions.dart';
+import '../services/pdf_generator.dart';
+
 class TestDetailScreen extends StatefulWidget {
   final String testId;
   const TestDetailScreen({super.key, required this.testId});
@@ -12,16 +16,24 @@ class TestDetailScreen extends StatefulWidget {
 class _TestDetailScreenState extends State<TestDetailScreen> {
   Map<String, dynamic>? _test;
   List<Map<String, dynamic>> _subscales = [];
+  List<Map<String, dynamic>> _answers = [];
+  List<Map<String, dynamic>> _notes = [];
   bool _isLoading = true;
   String? _error;
+
   final _noteController = TextEditingController();
-  List<Map<String, dynamic>> _notes = [];
   bool _isSavingNote = false;
 
   @override
   void initState() {
     super.initState();
     _loadTestDetail();
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTestDetail() async {
@@ -31,52 +43,98 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
     });
 
     try {
-      // ✅ Declaramos la variable aquí, al inicio del método
       final supabase = Supabase.instance.client;
 
-      // 1. Cargar el test con datos del paciente
+      // 1. Cargar el test
       final testResponse = await supabase
           .from('spence_tests')
-          .select('*, profiles!spence_tests_patient_id_fkey(full_name, email)')
+          .select('*')
           .eq('id', widget.testId)
           .maybeSingle();
 
-      if (testResponse == null) {
-        // Si falla el join, intentamos sin él
-        final simpleTest = await supabase
-            .from('spence_tests')
-            .select('*')
-            .eq('id', widget.testId)
-            .maybeSingle();
-        if (simpleTest == null) throw Exception('Test no encontrado');
-        setState(() => _test = simpleTest);
-      } else {
-        setState(() => _test = testResponse);
-      }
+      if (testResponse == null) throw Exception('Test no encontrado');
+      setState(() => _test = testResponse);
 
-      // 2. Cargar las subescalas ordenadas por código
+      // 2. Cargar subescalas
       final subscalesResponse = await supabase
           .from('spence_subscales')
           .select('*')
           .eq('test_id', widget.testId)
           .order('subscale_code');
-
       setState(
         () => _subscales = List<Map<String, dynamic>>.from(subscalesResponse),
       );
 
-      // 3. Cargar notas existentes (NUEVO)
+      // 3. Cargar notas
+      final notesResponse = await supabase
+          .from('clinical_notes')
+          .select('*')
+          .eq('test_id', widget.testId)
+          .order('created_at', ascending: false);
+      setState(() => _notes = List<Map<String, dynamic>>.from(notesResponse));
+
+      // 4. Cargar respuestas del test
+      final answersResponse = await supabase
+          .from('spence_answers')
+          .select('*')
+          .eq('test_id', widget.testId)
+          .order('question_number', ascending: true);
+      setState(
+        () => _answers = List<Map<String, dynamic>>.from(answersResponse),
+      );
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveNote() async {
+    final text = _noteController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe algo antes de guardar 📝')),
+      );
+      return;
+    }
+
+    setState(() => _isSavingNote = true);
+
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+
+      await supabase.from('clinical_notes').insert({
+        'test_id': widget.testId,
+        'patient_id': _test?['patient_id'],
+        'doctor_id': userId,
+        'note_text': text,
+      });
+
+      _noteController.clear();
+
       final notesResponse = await supabase
           .from('clinical_notes')
           .select('*')
           .eq('test_id', widget.testId)
           .order('created_at', ascending: false);
 
+      if (!mounted) return;
+
       setState(() => _notes = List<Map<String, dynamic>>.from(notesResponse));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Nota guardada correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSavingNote = false);
     }
   }
 
@@ -107,7 +165,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
     return names[code] ?? code;
   }
 
-  String _subscaleObservation(String code, String risk) {
+  String _subscaleObservation(String code) {
     const observations = {
       'SAD': 'Temores persistentes al alejamiento de figuras parentales; somatización matutina antes del colegio.',
       'SoP': 'Inhibición extrema ante pares y exposiciones en clase; miedo agudo al escrutinio o ridículo.',
@@ -117,6 +175,37 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
       'Phobia': 'Reactividad normal a estímulos físicos convencionales (oscuridad, insectos o alturas).',
     };
     return observations[code] ?? '';
+  }
+
+  int _maxForSubscale(String code) {
+    const maxScores = {
+      'SAD': 21,
+      'SoP': 18,
+      'OCD': 12,
+      'PD_AG': 21,
+      'OAD': 21,
+      'Phobia': 21,
+    };
+    return maxScores[code] ?? 21;
+  }
+
+  String _monthName(int month) {
+    const months = [
+      '',
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
+    return months[month];
   }
 
   @override
@@ -156,16 +245,14 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
     final riskLevel = test['risk_level'] as String? ?? 'Sin evaluar';
     final totalScore = test['total_score'] ?? 0;
     final percentile = (test['total_percentile'] as num?)?.toDouble() ?? 0;
+    final patientName = test['patient_name'] ?? 'Paciente sin nombre';
+    final patientAge = test['patient_age'] ?? '?';
     final date = test['completed_at'] != null
         ? DateTime.parse(test['completed_at']).toLocal()
         : null;
     final dateStr = date != null
         ? '${date.day} ${_monthName(date.month)} ${date.year}, ${date.hour}:${date.minute.toString().padLeft(2, '0')} hrs'
         : 'Fecha desconocida';
-
-    // Nombre del paciente (si el join funcionó)
-    final patientName = test['patient_name'] ?? 'Paciente sin nombre';
-    final patientAge = test['patient_age'] ?? '?';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -175,13 +262,22 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Exportar informe (próximamente)'),
-                ),
-              );
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Exportar PDF',
+            onPressed: () async {
+              try {
+                await PdfGenerator.generateAndShareTestReport(
+                  test: test,
+                  subscales: _subscales,
+                  answers: _answers,
+                  notes: _notes,
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al generar PDF: $e')),
+                );
+              }
             },
           ),
         ],
@@ -201,9 +297,9 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.deepPurple.shade100,
-                  child: const Text(
-                    'MG',
-                    style: TextStyle(
+                  child: Text(
+                    _initials(patientName),
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.deepPurple,
                     ),
@@ -222,7 +318,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                         ),
                       ),
                       Text(
-                        '$patientAge años • Test ID: ${test['id'].toString().substring(0, 8)}',
+                        '$patientAge años',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -467,7 +563,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
-                      value: score / maxScore,
+                      value: maxScore > 0 ? score / maxScore : 0,
                       minHeight: 6,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation(_riskColor(subRisk)),
@@ -475,7 +571,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _subscaleObservation(code, subRisk),
+                    _subscaleObservation(code),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black54,
@@ -485,9 +581,135 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                 ],
               ),
             );
-          }),
+          }).toList(),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+
+          // --- Respuestas Detalladas ---
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 0,
+                  ),
+                  childrenPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  title: Row(
+                    children: [
+                      const Icon(Icons.list_alt, color: Colors.deepPurple),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Respuestas Detalladas (${_answers.length}/38)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                  children: [
+                    const SizedBox(height: 8),
+                    ..._answers.map((answer) {
+                      final qNum = answer['question_number'] as int;
+                      final score = (answer['score'] as num?)?.toInt() ?? 0;
+                      final question = spenceQuestions.firstWhere(
+                        (q) => q.number == qNum,
+                        orElse: () => SpenceQuestion(
+                          number: qNum,
+                          text: 'Pregunta $qNum',
+                          subscale: 'N/A',
+                          emoji: '❓',
+                        ),
+                      );
+
+                      const labels = [
+                        'Nunca',
+                        'A veces',
+                        'Muchas veces',
+                        'Siempre',
+                      ];
+                      const colors = [
+                        Colors.green,
+                        Colors.amber,
+                        Colors.orange,
+                        Colors.red,
+                      ];
+                      final color = colors[score.clamp(0, 3)];
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  question.emoji,
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '$qNum. ${question.text}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    labels[score.clamp(0, 3)],
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '($score pts) • ${question.subscale}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
           // --- Notas de Evolución ---
           Container(
@@ -513,8 +735,6 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
-                // Campo para escribir nueva nota
                 TextField(
                   controller: _noteController,
                   maxLines: 4,
@@ -555,8 +775,6 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                     ),
                   ),
                 ),
-
-                // Historial de notas anteriores
                 if (_notes.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   const Divider(),
@@ -574,7 +792,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                     final noteDate = note['created_at'] != null
                         ? DateTime.parse(note['created_at']).toLocal()
                         : null;
-                    final dateStr = noteDate != null
+                    final noteDateStr = noteDate != null
                         ? '${noteDate.day}/${noteDate.month}/${noteDate.year} - ${noteDate.hour}:${noteDate.minute.toString().padLeft(2, '0')}'
                         : '';
 
@@ -598,7 +816,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                dateStr,
+                                noteDateStr,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Colors.deepPurple,
@@ -648,91 +866,10 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
     );
   }
 
-  int _maxForSubscale(String code) {
-    const maxScores = {
-      'SAD': 21,
-      'SoP': 18,
-      'OCD': 12,
-      'PD_AG': 21,
-      'OAD': 21,
-      'Phobia': 21,
-    };
-    return maxScores[code] ?? 21;
-  }
-
-  String _monthName(int month) {
-    const months = [
-      '',
-      'ene',
-      'feb',
-      'mar',
-      'abr',
-      'may',
-      'jun',
-      'jul',
-      'ago',
-      'sep',
-      'oct',
-      'nov',
-      'dic',
-    ];
-    return months[month];
-  }
-
-  Future<void> _saveNote() async {
-    final text = _noteController.text.trim();
-    if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe algo antes de guardar 📝')),
-      );
-      return;
-    }
-
-    setState(() => _isSavingNote = true);
-
-    try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser?.id;
-
-      await supabase.from('clinical_notes').insert({
-        'test_id': widget.testId,
-        'patient_id': _test?['patient_id'],
-        'doctor_id': userId,
-        'note_text': text,
-      });
-
-      _noteController.clear();
-
-      // Recargar las notas
-      final notesResponse = await supabase
-          .from('clinical_notes')
-          .select('*')
-          .eq('test_id', widget.testId)
-          .order('created_at', ascending: false);
-
-      setState(() => _notes = List<Map<String, dynamic>>.from(notesResponse));
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Nota guardada correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isSavingNote = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
+  String _initials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+    return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
   }
 }

@@ -35,7 +35,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
       return;
     }
 
-    context.go('/test?name=${Uri.encodeComponent(name)}&age=$age');
+    context.push('/test?name=${Uri.encodeComponent(name)}&age=$age');
   }
 
   @override
@@ -49,7 +49,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.push('/'),
         ),
       ),
       body: SafeArea(

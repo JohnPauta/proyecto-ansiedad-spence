@@ -259,13 +259,13 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       onPressed: () {
                         final name =
                             Uri.encodeComponent(test['patient_name']);
-                        context.go('/patient-history/$name');
+                        context.push('/patient-history/$name');
                       },
                     ),
                   // Botón de informe
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.go('/test-detail/${test['id']}');
+                      context.push('/test-detail/${test['id']}');
                     },
                     icon: const Icon(Icons.visibility, size: 16),
                     label: const Text('Ver informe'),
