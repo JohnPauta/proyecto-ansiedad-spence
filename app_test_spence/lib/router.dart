@@ -9,6 +9,7 @@ import 'screens/test_detail_screen.dart';
 import 'screens/patient_history_screen.dart';
 import 'screens/patients_list_screen.dart';
 import 'screens/new_patient_screen.dart';
+import 'screens/patient_detail_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -48,7 +49,17 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final name = state.uri.queryParameters['name'] ?? 'Paciente';
         final age = int.tryParse(state.uri.queryParameters['age'] ?? '0') ?? 0;
-        return PatientTestScreen(patientName: name, patientAge: age);
+        final patientId = state.uri.queryParameters['patientId'];
+        final doctorId = state.uri.queryParameters['doctorId'];
+        final code = state.uri.queryParameters['code'];
+
+        return PatientTestScreen(
+          patientName: name,
+          patientAge: age,
+          patientId: patientId,
+          doctorId: doctorId,
+          invitationCode: code,
+        );
       },
     ),
 
@@ -81,6 +92,14 @@ final GoRouter appRouter = GoRouter(
       path: '/patients/new',
       name: 'new-patient',
       builder: (context, state) => const NewPatientScreen(),
+    ),
+    GoRoute(
+      path: '/patients/:id',
+      name: 'patient-detail',
+      builder: (context, state) {
+        final patientId = state.pathParameters['id']!;
+        return PatientDetailScreen(patientId: patientId);
+      },
     ),
   ],
 );

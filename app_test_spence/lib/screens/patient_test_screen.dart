@@ -10,10 +10,17 @@ import '../models/spence_question.dart';
 class PatientTestScreen extends StatefulWidget {
   final String patientName;
   final int patientAge;
+  final String? patientId;
+  final String? doctorId;
+  final String? invitationCode;
+
   const PatientTestScreen({
     super.key,
     required this.patientName,
     required this.patientAge,
+    this.patientId,
+    this.doctorId,
+    this.invitationCode,
   });
 
   @override
@@ -70,9 +77,11 @@ class _PatientTestScreenState extends State<PatientTestScreen> {
       final testResponse = await supabase
           .from('spence_tests')
           .insert({
-            'patient_id': userId, // Puede ser null si no hay login
+            'patient_id': widget.patientId,
             'patient_name': widget.patientName,
             'patient_age': widget.patientAge,
+            'doctor_id': widget.doctorId,
+            'invitation_code_used': widget.invitationCode,
             'status': 'completed',
             'completed_at': DateTime.now().toUtc().toIso8601String(),
             'total_score': total['total'],

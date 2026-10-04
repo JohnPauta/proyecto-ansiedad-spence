@@ -581,7 +581,7 @@ class _TestDetailScreenState extends State<TestDetailScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
 
           const SizedBox(height: 8),
 

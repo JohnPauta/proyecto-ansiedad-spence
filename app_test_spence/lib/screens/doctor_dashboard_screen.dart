@@ -23,12 +23,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final supabase = Supabase.instance.client;
+      final doctorId = supabase.auth.currentUser?.id;
+
+      if (doctorId == null) throw Exception('No hay sesión');
+
       final response = await supabase
           .from('spence_tests')
           .select('*')
+          .eq('doctor_id', doctorId) // ⭐ Solo tests de este médico
           .eq('status', 'completed')
           .order('completed_at', ascending: false)
           .limit(50);
+
       setState(() => _tests = List<Map<String, dynamic>>.from(response));
     } catch (e) {
       debugPrint('Error: $e');
@@ -56,8 +62,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Widget build(BuildContext context) {
     final total = _tests.length;
     final alertCount = _tests
-        .where((t) =>
-            t['risk_level'] == 'Alto' || t['risk_level'] == 'Muy Alto')
+        .where(
+          (t) => t['risk_level'] == 'Alto' || t['risk_level'] == 'Muy Alto',
+        )
         .length;
 
     return Scaffold(
@@ -95,10 +102,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   Row(
                     children: [
                       _buildSummaryCard(
-                          'Pacientes', '$total', Icons.people, Colors.blue),
+                        'Pacientes',
+                        '$total',
+                        Icons.people,
+                        Colors.blue,
+                      ),
                       const SizedBox(width: 12),
-                      _buildSummaryCard('Alertas', '$alertCount',
-                          Icons.warning_amber, Colors.red),
+                      _buildSummaryCard(
+                        'Alertas',
+                        '$alertCount',
+                        Icons.warning_amber,
+                        Colors.red,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -106,8 +121,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   // --- Encabezado de la lista ---
                   const Text(
                     'Tests Recientes',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
 
@@ -138,7 +152,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   }
 
   Widget _buildSummaryCard(
-      String title, String value, IconData icon, Color color) {
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -147,7 +165,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
           ],
         ),
         child: Row(
@@ -160,12 +180,17 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(title,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ],
@@ -191,8 +216,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -212,19 +236,22 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     Text(
                       test['patient_name'] ?? 'Paciente sin nombre',
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       '${test['patient_age'] ?? '?'} años • $dateStr',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _riskColor(riskLevel).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -247,12 +274,16 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Puntuación Total',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text(
+                    'Puntuación Total',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   Text(
                     '$score / 114',
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -261,12 +292,13 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   // Botón de evolución (solo si hay nombre)
                   if (test['patient_name'] != null)
                     IconButton(
-                      icon: const Icon(Icons.show_chart,
-                          color: Colors.deepPurple),
+                      icon: const Icon(
+                        Icons.show_chart,
+                        color: Colors.deepPurple,
+                      ),
                       tooltip: 'Ver evolución',
                       onPressed: () {
-                        final name =
-                            Uri.encodeComponent(test['patient_name']);
+                        final name = Uri.encodeComponent(test['patient_name']);
                         context.push('/patient-history/$name');
                       },
                     ),
@@ -281,7 +313,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
                   ),
